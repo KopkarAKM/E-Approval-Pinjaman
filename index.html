@@ -1,0 +1,540 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistem Approval Pinjaman Koperasi</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap');
+        body { font-family: 'Inter', sans-serif; background-color: #f3f4f6; }
+        .section-card { background: white; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); padding: 24px; margin-bottom: 24px; }
+        .radio-custom:checked + label { background-color: #059669; color: white; border-color: #059669; }
+        
+        /* CSS Khusus untuk Cetak PDF */
+        @media print {
+            body { background-color: white; padding: 0; margin: 0; }
+            .no-print { display: none !important; }
+            .section-card { box-shadow: none; border: 1px solid #ccc; margin-bottom: 12px; padding: 12px; border-radius: 0; border-left-width: 1px !important; }
+            input, select, textarea { border: none !important; background: transparent !important; -webkit-appearance: none; -moz-appearance: none; appearance: none; pointer-events: none; }
+            .radio-custom + label { border: none !important; padding: 0 !important; }
+            .radio-custom:not(:checked) + label { display: none !important; }
+            .radio-custom:checked + label { background-color: transparent !important; color: black !important; font-weight: bold; }
+            #print-signature { display: flex !important; margin-top: 30px; justify-content: space-between; }
+        }
+    </style>
+</head>
+<body class="text-gray-800">
+
+    <!-- Navigasi (Sembunyi saat cetak) -->
+    <nav class="bg-emerald-800 text-white p-4 shadow-md no-print sticky top-0 z-40">
+        <div class="max-w-6xl mx-auto flex justify-between items-center">
+            <div class="font-bold text-lg flex items-center">
+                <img src="https://i.ibb.co.com/WvTwLMn5/image-1.png" alt="Logo Koperasi" class="h-8 md:h-10 mr-3 object-contain rounded bg-white p-0.5">
+                KopKAR Approval Pinjaman
+            </div>
+            <div class="space-x-4">
+                <button onclick="showView('dashboard')" class="hover:text-emerald-200 font-semibold"><i class="fas fa-list"></i> Daftar Pengajuan</button>
+                <button onclick="showView('form-input')" class="bg-emerald-600 hover:bg-emerald-500 px-4 py-2 rounded font-semibold"><i class="fas fa-plus"></i> Input Baru</button>
+            </div>
+        </div>
+    </nav>
+
+    <div class="max-w-5xl mx-auto p-4 md:p-8">
+        
+        <!-- ================= VIEW: DASHBOARD ================= -->
+        <div id="view-dashboard" class="block">
+            <div class="mb-6 flex justify-between items-center no-print">
+                <h2 class="text-2xl font-bold text-gray-800">Daftar Pengajuan Pinjaman</h2>
+                <button onclick="loadData()" class="text-emerald-600 hover:text-emerald-800"><i class="fas fa-sync-alt mr-1"></i> Refresh</button>
+            </div>
+            
+            <div class="bg-white rounded-lg shadow overflow-x-auto no-print">
+                <table class="w-full text-left border-collapse">
+                    <thead>
+                        <tr class="bg-gray-100 border-b">
+                            <th class="p-4 font-semibold text-sm">Tanggal</th>
+                            <th class="p-4 font-semibold text-sm">Nama</th>
+                            <th class="p-4 font-semibold text-sm">Nominal</th>
+                            <th class="p-4 font-semibold text-sm">Status</th>
+                            <th class="p-4 font-semibold text-sm text-center">Aksi</th>
+                        </tr>
+                    </thead>
+                    <tbody id="table-body">
+                        <!-- Data akan dimuat di sini oleh JS -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- ================= VIEW: FORM PENGAJUAN ================= -->
+        <div id="view-form" class="hidden">
+            <!-- Header (Tampil rapi di Web dan Cetak PDF) -->
+            <div class="mb-8 border-b-2 border-black pb-4">
+                <div class="flex items-center justify-center text-center mb-2">
+                    <img src="https://i.ibb.co.com/WvTwLMn5/image-1.png" alt="Logo Koperasi" class="h-24 mr-4 object-contain">
+                    <div>
+                        <h1 class="text-xl md:text-2xl font-bold uppercase text-emerald-900 print:text-black">KOPERASI KARYAWAN ADARO KARYA MANDIRI</h1>
+                        <p class="text-sm font-semibold">Badan Hukum Nomor : 2128/BH/IX Tanggal 31 Juli 1995</p>
+                    </div>
+                </div>
+                <div class="text-center text-xs md:text-sm mt-2">
+                    <p>Office : Jl. Jend. A. Yani Komp. Swadharma Jalur II Blok Mawar RT IV</p>
+                    <p>Kel. Mabuun Kec. Murung Pudak Kab. Tabalong Prov. Kalimantan Selatan Kode Pos 71571</p>
+                    <p>Telp/Fax : 0526 – 2023593 | Email : kopkar.adaro@gmail.com</p>
+                </div>
+                <h2 class="text-lg font-bold mt-4 pt-4 uppercase border-t border-gray-300 print:border-black text-center">Laporan Analisis Kelayakan & Persetujuan Pinjaman Anggota</h2>
+            </div>
+
+            <div class="flex justify-between items-center mb-6 no-print">
+                <button onclick="showView('dashboard')" class="text-gray-500 hover:text-gray-800 font-semibold"><i class="fas fa-arrow-left mr-2"></i> Kembali</button>
+                <button onclick="window.print()" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded font-semibold"><i class="fas fa-print mr-2"></i> Cetak Laporan PDF</button>
+            </div>
+
+            <form id="loanForm">
+                <input type="hidden" id="data_id">
+                
+                <!-- 1. DATA PEMOHON -->
+                <div class="section-card border-l-4 border-emerald-600">
+                    <h2 class="text-xl font-bold mb-4 flex items-center"><i class="fas fa-user-circle mr-2 text-emerald-600 no-print"></i> I. Data Pemohon</h2>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div><label class="block text-sm font-semibold mb-1">Nama Anggota</label><input type="text" id="nama" class="w-full p-2 border rounded" required></div>
+                        <div><label class="block text-sm font-semibold mb-1">NIK / No Anggota</label><input type="text" id="nik" class="w-full p-2 border rounded" required></div>
+                        <div><label class="block text-sm font-semibold mb-1">Departemen/Jabatan</label><input type="text" id="departemen" class="w-full p-2 border rounded" required></div>
+                        <div><label class="block text-sm font-semibold mb-1">Jenis Pinjaman</label>
+                            <select id="jenis_pinjaman" class="w-full p-2 border rounded">
+                                <option>Umum</option><option>Konsumtif</option><option>Voucher</option><option>Pembiayaan</option>
+                            </select>
+                        </div>
+                        <div><label class="block text-sm font-semibold mb-1">Nominal Pengajuan (Rp)</label><input type="number" id="nominal" class="w-full p-2 border rounded" oninput="calculateJaminan()" required></div>
+                        <div class="flex gap-2">
+                            <div class="w-1/3"><label class="block text-sm font-semibold mb-1">Tenor (Bln)</label><input type="number" id="tenor" class="w-full p-2 border rounded" required></div>
+                            <div class="w-2/3"><label class="block text-sm font-semibold mb-1">Cicilan/Bulan (Rp)</label><input type="number" id="cicilan" class="w-full p-2 border rounded" oninput="calculateKolektabilitas()" required></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 2. KOLEKTABILITAS & AGUNAN -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div class="section-card border-l-4 border-orange-500">
+                        <h2 class="text-xl font-bold mb-4 flex items-center"><i class="fas fa-calculator mr-2 text-orange-500 no-print"></i> II. Kolektabilitas</h2>
+                        <div class="space-y-3">
+                            <div><label class="block text-xs font-semibold">Gaji Diterima (Rp)</label><input type="number" id="gaji" class="w-full p-2 border rounded bg-gray-50" oninput="calculateKolektabilitas()"></div>
+                            <div><label class="block text-xs font-semibold">Hutang Luar (Rp)</label><input type="number" id="hutang_lain" class="w-full p-2 border rounded bg-gray-50" oninput="calculateKolektabilitas()"></div>
+                            <div><label class="block text-xs font-semibold">Hutang Koperasi (Rp)</label><input type="number" id="hutang_kop" class="w-full p-2 border rounded bg-gray-50" oninput="calculateKolektabilitas()"></div>
+                            <div><label class="block text-xs font-semibold">Biaya Hidup (Rp)</label><input type="number" id="biaya_hidup" class="w-full p-2 border rounded bg-gray-50" oninput="calculateKolektabilitas()"></div>
+                            <div class="p-3 bg-emerald-50 rounded mt-2 print:bg-transparent print:p-0 print:mt-4">
+                                <label class="block text-sm font-bold text-emerald-800 print:text-black">SISA GAJI BERSIH:</label>
+                                <span id="sisa_gaji_display" class="text-2xl font-bold text-emerald-700 print:text-black">Rp 0</span>
+                                <div id="status_kolektabilitas" class="text-sm font-semibold mt-1"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="section-card border-l-4 border-purple-500">
+                        <h2 class="text-xl font-bold mb-4 flex items-center"><i class="fas fa-car mr-2 text-purple-500 no-print"></i> III. Agunan / Jaminan</h2>
+                        <div class="space-y-3">
+                            <div><label class="block text-xs font-semibold">Jenis Jaminan</label>
+                                <select id="jenis_jaminan" class="w-full p-2 border rounded"><option>BPKB Motor/Mobil</option><option>Sertifikat Tanah/Rumah</option></select>
+                            </div>
+                            <div><label class="block text-xs font-semibold">Taksiran Nilai Pasar (Rp)</label><input type="number" id="taksiran_jaminan" class="w-full p-2 border rounded bg-gray-50" oninput="calculateJaminan()"></div>
+                            <div class="p-3 bg-purple-50 rounded mt-4 print:bg-transparent print:p-0 print:mt-4">
+                                <label class="block text-sm font-bold text-purple-800 print:text-black">Syarat Minimal (120%):</label>
+                                <span id="syarat_jaminan_display" class="text-2xl font-bold text-purple-700 print:text-black">Rp 0</span>
+                                <div id="status_jaminan" class="text-sm font-semibold mt-1"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 3. ANALISIS 5C (DENGAN KUNCI PIN) -->
+                <div class="section-card border-l-4 border-green-500 relative overflow-hidden" id="section-4">
+                    <!-- Overlay PIN -->
+                    <div id="overlay-unit" class="absolute inset-0 bg-gray-100/95 backdrop-blur-sm z-10 flex flex-col justify-center items-center no-print">
+                        <i class="fas fa-lock text-3xl text-gray-400 mb-2"></i>
+                        <h3 class="font-bold text-lg mb-2">Area Kepala Unit</h3>
+                        <div class="flex gap-2">
+                            <input type="password" id="pin-unit" placeholder="Masukkan PIN" class="p-2 border rounded text-center w-32">
+                            <button type="button" onclick="unlockSection('unit')" class="bg-green-600 text-white px-4 py-2 rounded font-bold">Buka</button>
+                        </div>
+                        <p class="text-xs text-gray-500 mt-2">*Gunakan PIN: 1234 untuk demo</p>
+                    </div>
+
+                    <h2 class="text-xl font-bold mb-4 flex items-center"><i class="fas fa-chart-pie mr-2 text-green-500 no-print"></i> IV. Analisis 5C</h2>
+                    
+                    <div class="space-y-4">
+                        <div>
+                            <p class="font-semibold text-sm mb-2">1. Capacity (Kemampuan Bayar) - <span class="text-red-500 print:text-black">MUTLAK</span></p>
+                            <div class="flex gap-2 text-sm print:block">
+                                <input type="radio" name="c1" id="c1_3" value="3" class="hidden radio-custom" onchange="calc5C()"><label for="c1_3" class="flex-1 p-2 border rounded cursor-pointer text-center">3 (Sisa Gaji > Cicilan)</label>
+                                <input type="radio" name="c1" id="c1_2" value="2" class="hidden radio-custom" onchange="calc5C()"><label for="c1_2" class="flex-1 p-2 border rounded cursor-pointer text-center">2 (Sisa Gaji Mepet)</label>
+                                <input type="radio" name="c1" id="c1_1" value="1" class="hidden radio-custom" onchange="calc5C()"><label for="c1_1" class="flex-1 p-2 border rounded cursor-pointer text-center">1 (Sisa Gaji Minus)</label>
+                            </div>
+                        </div>
+                        <div>
+                            <p class="font-semibold text-sm mb-2">2. Collateral (Agunan) - <span class="text-red-500 print:text-black">MUTLAK</span></p>
+                            <div class="flex gap-2 text-sm print:block">
+                                <input type="radio" name="c2" id="c2_3" value="3" class="hidden radio-custom" onchange="calc5C()"><label for="c2_3" class="flex-1 p-2 border rounded cursor-pointer text-center">3 (Taksiran ≥ 120%)</label>
+                                <input type="radio" name="c2" id="c2_2" value="2" class="hidden radio-custom" onchange="calc5C()"><label for="c2_2" class="flex-1 p-2 border rounded cursor-pointer text-center">2 (Taksiran 100-119%)</label>
+                                <input type="radio" name="c2" id="c2_1" value="1" class="hidden radio-custom" onchange="calc5C()"><label for="c2_1" class="flex-1 p-2 border rounded cursor-pointer text-center">1 (< 100% / Tidak ada)</label>
+                            </div>
+                        </div>
+                        <div>
+                            <p class="font-semibold text-sm mb-2">3. Character (Watak)</p>
+                            <div class="flex gap-2 text-sm print:block">
+                                <input type="radio" name="c3" id="c3_3" value="3" class="hidden radio-custom" onchange="calc5C()"><label for="c3_3" class="flex-1 p-2 border rounded cursor-pointer text-center">3 (Rekam Jejak Baik)</label>
+                                <input type="radio" name="c3" id="c3_2" value="2" class="hidden radio-custom" onchange="calc5C()"><label for="c3_2" class="flex-1 p-2 border rounded cursor-pointer text-center">2 (Anggota Baru/Standar)</label>
+                                <input type="radio" name="c3" id="c3_1" value="1" class="hidden radio-custom" onchange="calc5C()"><label for="c3_1" class="flex-1 p-2 border rounded cursor-pointer text-center">1 (Pernah Bermasalah)</label>
+                            </div>
+                        </div>
+                        <div>
+                            <p class="font-semibold text-sm mb-2">4. Capital (Modal/Simpanan)</p>
+                            <div class="flex gap-2 text-sm print:block">
+                                <input type="radio" name="c4" id="c4_3" value="3" class="hidden radio-custom" onchange="calc5C()"><label for="c4_3" class="flex-1 p-2 border rounded cursor-pointer text-center">3 (Saldo > 20% Pinjaman)</label>
+                                <input type="radio" name="c4" id="c4_2" value="2" class="hidden radio-custom" onchange="calc5C()"><label for="c4_2" class="flex-1 p-2 border rounded cursor-pointer text-center">2 (Saldo 10% - 20%)</label>
+                                <input type="radio" name="c4" id="c4_1" value="1" class="hidden radio-custom" onchange="calc5C()"><label for="c4_1" class="flex-1 p-2 border rounded cursor-pointer text-center">1 (Saldo Minim < 10%)</label>
+                            </div>
+                        </div>
+                        <div>
+                            <p class="font-semibold text-sm mb-2">5. Condition (Kondisi Kerja)</p>
+                            <div class="flex gap-2 text-sm print:block">
+                                <input type="radio" name="c5" id="c5_3" value="3" class="hidden radio-custom" onchange="calc5C()"><label for="c5_3" class="flex-1 p-2 border rounded cursor-pointer text-center">3 (Kerja Stabil & Aman)</label>
+                                <input type="radio" name="c5" id="c5_2" value="2" class="hidden radio-custom" onchange="calc5C()"><label for="c5_2" class="flex-1 p-2 border rounded cursor-pointer text-center">2 (Hambatan Ringan)</label>
+                                <input type="radio" name="c5" id="c5_1" value="1" class="hidden radio-custom" onchange="calc5C()"><label for="c5_1" class="flex-1 p-2 border rounded cursor-pointer text-center">1 (Proses SP/Akan Resign)</label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mt-6 p-4 rounded-lg bg-gray-100 text-center border print:bg-transparent print:border-black" id="box_rekomendasi">
+                        <h3 class="text-sm text-gray-500 font-bold uppercase tracking-wider print:text-black">Kesimpulan & Rekomendasi</h3>
+                        <div class="text-2xl font-black mt-2 mb-1" id="teks_rekomendasi">BELUM DIANALISA</div>
+                        <p class="text-sm font-semibold" id="teks_skor">Skor Total: 0 / 15</p>
+                    </div>
+                </div>
+
+                <!-- 4. KEPUTUSAN PENGURUS (DENGAN KUNCI PIN) -->
+                <div class="section-card border-l-4 border-red-500 bg-red-50 relative print:bg-transparent" id="section-5">
+                    <!-- Overlay PIN -->
+                    <div id="overlay-pengurus" class="absolute inset-0 bg-red-50/95 backdrop-blur-sm z-10 flex flex-col justify-center items-center no-print">
+                        <i class="fas fa-lock text-3xl text-red-400 mb-2"></i>
+                        <h3 class="font-bold text-lg mb-2 text-red-800">Area Pengurus Koperasi</h3>
+                        <div class="flex gap-2">
+                            <input type="password" id="pin-pengurus" placeholder="Masukkan PIN" class="p-2 border rounded text-center w-32">
+                            <button type="button" onclick="unlockSection('pengurus')" class="bg-red-600 text-white px-4 py-2 rounded font-bold">Buka</button>
+                        </div>
+                        <p class="text-xs text-red-500 mt-2">*Gunakan PIN: 5678 untuk demo</p>
+                    </div>
+
+                    <h2 class="text-xl font-bold mb-4 flex items-center text-red-700 print:text-black"><i class="fas fa-signature mr-2 no-print"></i> V. Keputusan Pengurus (Approval)</h2>
+                    <div>
+                        <label class="block text-sm font-semibold mb-2">Keputusan Akhir:</label>
+                        <select id="status_approval" class="w-full p-2 border rounded bg-white font-bold print:border-none print:p-0">
+                            <option value="Menunggu">-- Pilih Keputusan --</option>
+                            <option value="DISETUJUI SECARA PENUH">DISETUJUI SECARA PENUH</option>
+                            <option value="DISETUJUI DENGAN CATATAN">DISETUJUI DENGAN CATATAN</option>
+                            <option value="DITOLAK">DITOLAK</option>
+                        </select>
+                    </div>
+                    <div class="mt-4">
+                        <label class="block text-sm font-semibold mb-2">Catatan Pengurus (Jika Ada):</label>
+                        <textarea id="catatan" rows="3" class="w-full p-2 border rounded bg-white print:border-none print:p-0"></textarea>
+                    </div>
+                </div>
+
+                <!-- Kolom Tanda Tangan (Hanya muncul saat cetak PDF) -->
+                <div id="print-signature" class="hidden mt-8 text-center text-sm">
+                    <div class="w-1/4">
+                        <p class="mb-16">Disusun Oleh,</p>
+                        <p class="font-bold underline">Staf Pinjaman</p>
+                    </div>
+                    <div class="w-1/4">
+                        <p class="mb-16">Dianalisa Oleh,</p>
+                        <p class="font-bold underline">Kepala Unit</p>
+                    </div>
+                    <div class="w-1/4">
+                        <p class="mb-16">Ditelaah Oleh,</p>
+                        <p class="font-bold underline">Manajer</p>
+                    </div>
+                    <div class="w-1/4">
+                        <p class="mb-16">Disetujui Oleh,</p>
+                        <p class="font-bold underline">Pengurus Koperasi</p>
+                    </div>
+                </div>
+
+                <div class="flex gap-4 mt-6 no-print">
+                    <button type="button" id="btn-simpan" onclick="saveDataToServer()" class="flex-1 bg-emerald-700 hover:bg-emerald-800 text-white font-bold py-4 rounded-lg shadow text-lg">
+                        <i class="fas fa-save mr-2"></i> SIMPAN PENGAJUAN
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        // URL Google Apps Script Anda
+        const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyCOgE5Gh56t8UpSB8tl1Z5kVgbiVjor6fXhxz2mdv7yRAt8R_jNh-GpPPOCBjBh15C/exec';
+        
+        let localDatabase = JSON.parse(localStorage.getItem('koperasi_db')) || [];
+
+        const formatRp = (angka) => {
+            return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(angka || 0);
+        }
+
+        // --- SISTEM NAVIGASI & VIEW ---
+        function showView(view) {
+            document.getElementById('view-dashboard').classList.add('hidden');
+            document.getElementById('view-form').classList.add('hidden');
+            
+            if(view === 'dashboard') {
+                document.getElementById('view-dashboard').classList.remove('hidden');
+                loadData();
+            } else if (view === 'form-input') {
+                document.getElementById('view-form').classList.remove('hidden');
+                document.getElementById('loanForm').reset();
+                document.getElementById('data_id').value = Date.now(); // Generate ID unik
+                lockSections(); // Kunci form untuk input baru
+                resetDisplays();
+            }
+        }
+
+        function loadData() {
+            const tbody = document.getElementById('table-body');
+            tbody.innerHTML = '';
+            
+            if(localDatabase.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="5" class="text-center p-4 text-gray-500">Belum ada data pengajuan.</td></tr>';
+                return;
+            }
+
+            localDatabase.forEach(item => {
+                let statusColor = item.status_approval.includes("DISETUJUI") ? "bg-green-100 text-green-800" : 
+                                  item.status_approval === "DITOLAK" ? "bg-red-100 text-red-800" : "bg-yellow-100 text-yellow-800";
+                
+                let tr = document.createElement('tr');
+                tr.className = "border-b hover:bg-gray-50";
+                tr.innerHTML = `
+                    <td class="p-4 text-sm">${new Date(item.id).toLocaleDateString('id-ID')}</td>
+                    <td class="p-4 text-sm font-semibold">${item.nama}</td>
+                    <td class="p-4 text-sm">${formatRp(item.nominal)}</td>
+                    <td class="p-4 text-sm"><span class="px-2 py-1 rounded text-xs font-bold ${statusColor}">${item.status_approval}</span></td>
+                    <td class="p-4 text-sm text-center">
+                        <button onclick="openForm(${item.id})" class="bg-emerald-100 text-emerald-700 px-3 py-1 rounded hover:bg-emerald-200 text-xs font-bold">Proses / Lihat</button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        // Fungsi Ambil Data dari Google Sheets (Jika Anda sudah setup fungsi doGet di GAS)
+        function fetchFromServer() {
+            // Jika backend belum siap mengirim JSON array, kita gunakan localDatabase sementara
+            fetch(SCRIPT_URL)
+                .then(res => res.json())
+                .then(data => {
+                    if(data && Array.isArray(data)) {
+                        localDatabase = data;
+                        localStorage.setItem('koperasi_db', JSON.stringify(localDatabase));
+                        loadData();
+                    }
+                }).catch(err => console.log("Gunakan data lokal sementara", err));
+        }
+
+        function openForm(id) {
+            const data = localDatabase.find(d => d.id == id);
+            if(!data) return;
+
+            document.getElementById('data_id').value = data.id;
+            document.getElementById('nama').value = data.nama || '';
+            document.getElementById('nik').value = data.nik || '';
+            document.getElementById('departemen').value = data.departemen || '';
+            document.getElementById('jenis_pinjaman').value = data.jenis_pinjaman || 'Umum';
+            document.getElementById('nominal').value = data.nominal || '';
+            document.getElementById('tenor').value = data.tenor || '';
+            document.getElementById('cicilan').value = data.cicilan || '';
+            document.getElementById('gaji').value = data.gaji || '';
+            document.getElementById('hutang_lain').value = data.hutang_lain || '';
+            document.getElementById('hutang_kop').value = data.hutang_kop || '';
+            document.getElementById('biaya_hidup').value = data.biaya_hidup || '';
+            document.getElementById('jenis_jaminan').value = data.jenis_jaminan || 'BPKB Motor/Mobil';
+            document.getElementById('taksiran_jaminan').value = data.taksiran_jaminan || '';
+            document.getElementById('status_approval').value = data.status_approval || 'Menunggu';
+            document.getElementById('catatan').value = data.catatan || '';
+
+            // Set Radio buttons (5C) if exist
+            if(data.c1) document.getElementById(`c1_${data.c1}`).checked = true;
+            if(data.c2) document.getElementById(`c2_${data.c2}`).checked = true;
+            if(data.c3) document.getElementById(`c3_${data.c3}`).checked = true;
+            if(data.c4) document.getElementById(`c4_${data.c4}`).checked = true;
+            if(data.c5) document.getElementById(`c5_${data.c5}`).checked = true;
+
+            calculateKolektabilitas();
+            calculateJaminan();
+            calc5C();
+            
+            lockSections(); // Kunci PIN lagi saat membuka berkas
+            document.getElementById('view-dashboard').classList.add('hidden');
+            document.getElementById('view-form').classList.remove('hidden');
+        }
+
+        function saveDataToServer() {
+            let id = document.getElementById('data_id').value;
+            if(!document.getElementById('nama').value) {
+                alert("Nama Pemohon Wajib Diisi!"); return;
+            }
+
+            let data = {
+                id: id ? Number(id) : Date.now(),
+                nama: document.getElementById('nama').value,
+                nik: document.getElementById('nik').value,
+                departemen: document.getElementById('departemen').value,
+                jenis_pinjaman: document.getElementById('jenis_pinjaman').value,
+                nominal: Number(document.getElementById('nominal').value),
+                tenor: document.getElementById('tenor').value,
+                cicilan: Number(document.getElementById('cicilan').value),
+                gaji: Number(document.getElementById('gaji').value),
+                hutang_lain: Number(document.getElementById('hutang_lain').value),
+                hutang_kop: Number(document.getElementById('hutang_kop').value),
+                biaya_hidup: Number(document.getElementById('biaya_hidup').value),
+                sisa_gaji: (Number(document.getElementById('gaji').value) - Number(document.getElementById('hutang_lain').value) - Number(document.getElementById('hutang_kop').value) - Number(document.getElementById('biaya_hidup').value)),
+                jenis_jaminan: document.getElementById('jenis_jaminan').value,
+                taksiran_jaminan: Number(document.getElementById('taksiran_jaminan').value),
+                skor_5c: document.getElementById('teks_skor').innerText,
+                rekomendasi: document.getElementById('teks_rekomendasi').innerText,
+                status_approval: document.getElementById('status_approval').value,
+                catatan: document.getElementById('catatan').value,
+                c1: document.querySelector('input[name="c1"]:checked')?.value || null,
+                c2: document.querySelector('input[name="c2"]:checked')?.value || null,
+                c3: document.querySelector('input[name="c3"]:checked')?.value || null,
+                c4: document.querySelector('input[name="c4"]:checked')?.value || null,
+                c5: document.querySelector('input[name="c5"]:checked')?.value || null
+            };
+
+            // Simpan ke local storage agar tampil di dashboard langsung
+            let existingIndex = localDatabase.findIndex(d => d.id == data.id);
+            if(existingIndex >= 0) {
+                localDatabase[existingIndex] = data; 
+            } else {
+                localDatabase.push(data); 
+            }
+            localStorage.setItem('koperasi_db', JSON.stringify(localDatabase));
+
+            // Ubah tombol jadi loading
+            let btn = document.getElementById('btn-simpan');
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i> MENGIRIM KE GOOGLE SHEETS...';
+            btn.disabled = true;
+
+            // Kirim ke Google Sheets
+            fetch(SCRIPT_URL, {
+                method: 'POST',
+                body: JSON.stringify(data),
+                headers: {
+                    'Content-Type': 'text/plain;charset=utf-8' 
+                }
+            })
+            .then(res => res.json())
+            .then(res => {
+                alert("Data berhasil tersimpan di Google Sheets!");
+                showView('dashboard');
+            })
+            .catch(err => {
+                alert("Data tersimpan di Dashboard Lokal. Tidak terhubung ke Google Sheets.");
+                showView('dashboard');
+            })
+            .finally(() => {
+                btn.innerHTML = '<i class="fas fa-save mr-2"></i> SIMPAN PENGAJUAN';
+                btn.disabled = false;
+            });
+        }
+
+        // --- SISTEM PIN OTORISASI ---
+        function lockSections() {
+            document.getElementById('overlay-unit').classList.remove('hidden');
+            document.getElementById('overlay-pengurus').classList.remove('hidden');
+            document.getElementById('pin-unit').value = '';
+            document.getElementById('pin-pengurus').value = '';
+        }
+
+        function unlockSection(type) {
+            if(type === 'unit') {
+                if(document.getElementById('pin-unit').value === '1234') {
+                    document.getElementById('overlay-unit').classList.add('hidden');
+                } else {
+                    alert("PIN Kepala Unit Salah!");
+                }
+            } else if (type === 'pengurus') {
+                if(document.getElementById('pin-pengurus').value === '5678') {
+                    document.getElementById('overlay-pengurus').classList.add('hidden');
+                } else {
+                    alert("PIN Pengurus Salah!");
+                }
+            }
+        }
+
+        // --- FUNGSI KALKULASI (Sama seperti sebelumnya) ---
+        function resetDisplays() {
+            document.getElementById('sisa_gaji_display').innerText = "Rp 0";
+            document.getElementById('syarat_jaminan_display').innerText = "Rp 0";
+            document.getElementById('teks_rekomendasi').innerText = "BELUM DIANALISA";
+            document.getElementById('box_rekomendasi').className = "mt-6 p-4 rounded-lg bg-gray-100 text-center border";
+        }
+
+        function calculateKolektabilitas() {
+            let sisa = (Number(document.getElementById('gaji').value) || 0) - (Number(document.getElementById('hutang_lain').value) || 0) - (Number(document.getElementById('hutang_kop').value) || 0) - (Number(document.getElementById('biaya_hidup').value) || 0);
+            let cicilan = Number(document.getElementById('cicilan').value) || 0;
+            document.getElementById('sisa_gaji_display').innerText = formatRp(sisa);
+            
+            let statusEl = document.getElementById('status_kolektabilitas');
+            if(sisa >= cicilan && cicilan > 0) {
+                statusEl.innerHTML = "<span class='text-green-600 print:text-black'>✓ LAYAK (Sisa gaji > Cicilan)</span>";
+            } else if (sisa < cicilan && cicilan > 0) {
+                statusEl.innerHTML = "<span class='text-red-600 print:text-black'>✗ TIDAK LAYAK (Sisa gaji minus)</span>";
+            } else { statusEl.innerHTML = ""; }
+        }
+
+        function calculateJaminan() {
+            let syarat = (Number(document.getElementById('nominal').value) || 0) * 1.2;
+            let taksiran = Number(document.getElementById('taksiran_jaminan').value) || 0;
+            document.getElementById('syarat_jaminan_display').innerText = formatRp(syarat);
+            
+            let statusEl = document.getElementById('status_jaminan');
+            if(taksiran >= syarat && syarat > 0) {
+                statusEl.innerHTML = "<span class='text-green-600 print:text-black'>✓ SESUAI KETENTUAN (≥120%)</span>";
+            } else if(taksiran > 0) {
+                statusEl.innerHTML = "<span class='text-red-600 print:text-black'>✗ TIDAK SESUAI (<120%)</span>";
+            } else { statusEl.innerHTML = ""; }
+        }
+
+        function calc5C() {
+            let c1 = parseInt(document.querySelector('input[name="c1"]:checked')?.value || 0);
+            let c2 = parseInt(document.querySelector('input[name="c2"]:checked')?.value || 0);
+            let c3 = parseInt(document.querySelector('input[name="c3"]:checked')?.value || 0);
+            let c4 = parseInt(document.querySelector('input[name="c4"]:checked')?.value || 0);
+            let c5 = parseInt(document.querySelector('input[name="c5"]:checked')?.value || 0);
+            if(!c1 || !c2 || !c3 || !c4 || !c5) return;
+
+            let total = c1 + c2 + c3 + c4 + c5;
+            document.getElementById('teks_skor').innerText = `Skor Total: ${total} / 15`;
+            let box = document.getElementById('box_rekomendasi');
+            let teks = document.getElementById('teks_rekomendasi');
+
+            if (c1 === 1 || c2 === 1 || c3 === 1 || total < 10) {
+                teks.innerText = "TIDAK LAYAK (DITOLAK)";
+                box.className = "mt-6 p-4 rounded-lg text-center border bg-red-100 text-red-800 border-red-400 print:bg-transparent print:border-black";
+            } else if (c1 === 3 && c2 === 3 && total >= 13) {
+                teks.innerText = "LAYAK (DISETUJUI PENUH)";
+                box.className = "mt-6 p-4 rounded-lg text-center border bg-green-100 text-green-800 border-green-400 print:bg-transparent print:border-black";
+            } else if (c1 === 3 && c2 === 3 && (total === 11 || total === 12)) {
+                teks.innerText = "LAYAK DENGAN CATATAN";
+                box.className = "mt-6 p-4 rounded-lg text-center border bg-yellow-100 text-yellow-800 border-yellow-400 print:bg-transparent print:border-black";
+            } else if (total >= 10 && total <= 12 && (c1 === 2 || c2 === 2)) {
+                teks.innerText = "ESKALASI / KEBIJAKSANAAN PENGURUS";
+                box.className = "mt-6 p-4 rounded-lg text-center border bg-orange-100 text-orange-800 border-orange-400 print:bg-transparent print:border-black";
+            }
+        }
+
+        // Initialize
+        showView('dashboard');
+    </script>
+</body>
+</html>
