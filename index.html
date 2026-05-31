@@ -288,7 +288,7 @@
             
             if(view === 'dashboard') {
                 document.getElementById('view-dashboard').classList.remove('hidden');
-                loadData();
+                fetchFromServer();
             } else if (view === 'form-input') {
                 document.getElementById('view-form').classList.remove('hidden');
                 document.getElementById('loanForm').reset();
@@ -328,16 +328,21 @@
 
         // Fungsi Ambil Data dari Google Sheets (Jika Anda sudah setup fungsi doGet di GAS)
         function fetchFromServer() {
-            // Jika backend belum siap mengirim JSON array, kita gunakan localDatabase sementara
+            const tbody = document.getElementById('table-body');
+            tbody.innerHTML = '<tr><td colspan="5" class="text-center p-4 text-emerald-600 font-bold"><i class="fas fa-spinner fa-spin mr-2"></i> Mengambil data dari server...</td></tr>';
+
             fetch(SCRIPT_URL)
                 .then(res => res.json())
                 .then(data => {
                     if(data && Array.isArray(data)) {
                         localDatabase = data;
                         localStorage.setItem('koperasi_db', JSON.stringify(localDatabase));
-                        loadData();
                     }
-                }).catch(err => console.log("Gunakan data lokal sementara", err));
+                    loadData();
+                }).catch(err => {
+                    console.log("Gagal ambil dari server, gunakan data lokal", err);
+                    loadData();
+                });
         }
 
         function openForm(id) {
