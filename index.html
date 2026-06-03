@@ -272,13 +272,35 @@
     </div>
 
     <script>
-        const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyCOgE5Gh56t8UpSB8tl1Z5kVgbiVjor6fXhxz2mdv7yRAt8R_jNh-GpPPOCBjBh15C/exec';
+        const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwgWxdLpyJr9rloafsfNlH0_S44RN1gQBcECtIL7f5nYnD764urUfufWE3stw65FfOF/exec';
         
         let localDatabase = JSON.parse(localStorage.getItem('koperasi_db')) || [];
 
         const formatRp = (angka) => {
             return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(angka || 0);
         }
+
+        const getVal = (data, keys) => {
+            if (!data) return '';
+            for (let k of keys) {
+                if (data[k] !== undefined && data[k] !== null && data[k] !== "") return data[k];
+            }
+            let lowerKeys = keys.map(k => String(k).toLowerCase().replace(/[^a-z0-9]/g, ''));
+            for (let key in data) {
+                let cleanKey = String(key).toLowerCase().replace(/[^a-z0-9]/g, '');
+                if (lowerKeys.includes(cleanKey)) {
+                    if (data[key] !== undefined && data[key] !== null && data[key] !== "") return data[key];
+                }
+            }
+            return '';
+        };
+
+        const getNum = (data, keys) => {
+            let val = getVal(data, keys);
+            if (val === '') return '';
+            let num = Number(String(val).replace(/[^0-9.-]+/g, ''));
+            return isNaN(num) ? '' : num;
+        };
 
         function showView(view) {
             document.getElementById('view-dashboard').classList.add('hidden');
@@ -306,16 +328,23 @@
             }
 
             localDatabase.forEach((item, index) => {
-                let statusColor = item.status_approval.includes("DISETUJUI") ? "bg-green-100 text-green-800" : 
-                                  item.status_approval === "DITOLAK" ? "bg-red-100 text-red-800" : "bg-yellow-100 text-yellow-800";
+                let statusData = getVal(item, ['status_approval', 'Status']) || 'Menunggu';
+                let statusColor = statusData.includes("DISETUJUI") ? "bg-green-100 text-green-800" : 
+                                  statusData === "DITOLAK" ? "bg-red-100 text-red-800" : "bg-yellow-100 text-yellow-800";
                 
+                let itemId = getVal(item, ['id', 'Timestamp']);
+                let tgl = new Date(itemId);
+                let tglStr = isNaN(tgl.getTime()) ? '-' : tgl.toLocaleDateString('id-ID');
+                let nama = getVal(item, ['nama', 'Nama']);
+                let nominal = Number(getVal(item, ['nominal', 'Nominal'])) || 0;
+
                 let tr = document.createElement('tr');
                 tr.className = "border-b hover:bg-gray-50";
                 tr.innerHTML = `
-                    <td class="p-4 text-sm">${new Date(item.id).toLocaleDateString('id-ID')}</td>
-                    <td class="p-4 text-sm font-semibold">${item.nama}</td>
-                    <td class="p-4 text-sm">${formatRp(item.nominal)}</td>
-                    <td class="p-4 text-sm"><span class="px-2 py-1 rounded text-xs font-bold ${statusColor}">${item.status_approval}</span></td>
+                    <td class="p-4 text-sm">${tglStr}</td>
+                    <td class="p-4 text-sm font-semibold">${nama}</td>
+                    <td class="p-4 text-sm">${formatRp(nominal)}</td>
+                    <td class="p-4 text-sm"><span class="px-2 py-1 rounded text-xs font-bold ${statusColor}">${statusData}</span></td>
                     <td class="p-4 text-sm text-center">
                         <button onclick="openForm(${index})" class="bg-emerald-100 text-emerald-700 px-3 py-1 rounded hover:bg-emerald-200 text-xs font-bold">Proses / Lihat</button>
                     </td>
@@ -348,28 +377,34 @@
             const data = localDatabase[index];
             if(!data) return;
 
-            document.getElementById('data_id').value = data.id || '';
-            document.getElementById('nama').value = data.nama || '';
-            document.getElementById('nik').value = data.nik || '';
-            document.getElementById('departemen').value = data.departemen || '';
-            document.getElementById('jenis_pinjaman').value = data.jenis_pinjaman || 'Umum';
-            document.getElementById('nominal').value = data.nominal || '';
-            document.getElementById('tenor').value = data.tenor || '';
-            document.getElementById('cicilan').value = data.cicilan || '';
-            document.getElementById('gaji').value = data.gaji || '';
-            document.getElementById('hutang_lain').value = data.hutang_lain || '';
-            document.getElementById('hutang_kop').value = data.hutang_kop || '';
-            document.getElementById('biaya_hidup').value = data.biaya_hidup || '';
-            document.getElementById('jenis_jaminan').value = data.jenis_jaminan || 'BPKB Motor/Mobil';
-            document.getElementById('taksiran_jaminan').value = data.taksiran_jaminan || '';
-            document.getElementById('status_approval').value = data.status_approval || 'Menunggu';
-            document.getElementById('catatan').value = data.catatan || '';
+            document.getElementById('data_id').value = getVal(data, ['id', 'Timestamp']);
+            document.getElementById('nama').value = getVal(data, ['nama', 'Nama']);
+            document.getElementById('nik').value = getVal(data, ['nik', 'NIK', 'No Anggota']);
+            document.getElementById('departemen').value = getVal(data, ['departemen', 'Departemen', 'Jabatan']);
+            document.getElementById('jenis_pinjaman').value = getVal(data, ['jenis_pinjaman', 'Jenis Pinjaman']) || 'Umum';
+            document.getElementById('nominal').value = getNum(data, ['nominal', 'Nominal']);
+            document.getElementById('tenor').value = getNum(data, ['tenor', 'Tenor']);
+            document.getElementById('cicilan').value = getNum(data, ['cicilan', 'Cicilan']);
+            document.getElementById('gaji').value = getNum(data, ['gaji', 'Gaji', 'Gaji Diterima']);
+            document.getElementById('hutang_lain').value = getNum(data, ['hutang_lain', 'Hutang Lain', 'Hutang Luar']);
+            document.getElementById('hutang_kop').value = getNum(data, ['hutang_kop', 'Hutang Koperasi', 'Hutang Koperas']);
+            document.getElementById('biaya_hidup').value = getNum(data, ['biaya_hidup', 'Biaya Hidup']);
+            document.getElementById('jenis_jaminan').value = getVal(data, ['jenis_jaminan', 'Jenis Jaminan']) || 'BPKB Motor/Mobil';
+            document.getElementById('taksiran_jaminan').value = getNum(data, ['taksiran_jaminan', 'Taksiran Jamina', 'Taksiran Jaminan']);
+            document.getElementById('status_approval').value = getVal(data, ['status_approval', 'Status']) || 'Menunggu';
+            document.getElementById('catatan').value = getVal(data, ['catatan', 'Catatan']);
 
-            if(data.c1) document.getElementById(`c1_${data.c1}`).checked = true;
-            if(data.c2) document.getElementById(`c2_${data.c2}`).checked = true;
-            if(data.c3) document.getElementById(`c3_${data.c3}`).checked = true;
-            if(data.c4) document.getElementById(`c4_${data.c4}`).checked = true;
-            if(data.c5) document.getElementById(`c5_${data.c5}`).checked = true;
+            let skorC1 = getVal(data, ['c1', 'C1']);
+            let skorC2 = getVal(data, ['c2', 'C2']);
+            let skorC3 = getVal(data, ['c3', 'C3']);
+            let skorC4 = getVal(data, ['c4', 'C4']);
+            let skorC5 = getVal(data, ['c5', 'C5']);
+
+            if(skorC1) { let el = document.getElementById(`c1_${skorC1}`); if(el) el.checked = true; }
+            if(skorC2) { let el = document.getElementById(`c2_${skorC2}`); if(el) el.checked = true; }
+            if(skorC3) { let el = document.getElementById(`c3_${skorC3}`); if(el) el.checked = true; }
+            if(skorC4) { let el = document.getElementById(`c4_${skorC4}`); if(el) el.checked = true; }
+            if(skorC5) { let el = document.getElementById(`c5_${skorC5}`); if(el) el.checked = true; }
 
             calculateKolektabilitas();
             calculateJaminan();
