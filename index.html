@@ -47,7 +47,7 @@
         <div id="view-dashboard" class="block">
             <div class="mb-6 flex justify-between items-center no-print">
                 <h2 class="text-2xl font-bold text-gray-800">Daftar Pengajuan Pinjaman</h2>
-                <button onclick="loadData()" class="text-emerald-600 hover:text-emerald-800"><i class="fas fa-sync-alt mr-1"></i> Refresh</button>
+                <button onclick="fetchFromServer()" class="text-emerald-600 hover:text-emerald-800"><i class="fas fa-sync-alt mr-1"></i> Refresh</button>
             </div>
             
             <div class="bg-white rounded-lg shadow overflow-x-auto no-print">
@@ -175,7 +175,7 @@
                         <div>
                             <p class="font-semibold text-sm mb-2">2. Collateral (Agunan) - <span class="text-red-500 print:text-black">MUTLAK</span></p>
                             <div class="flex gap-2 text-sm print:block">
-                                <input type="radio" name="c2" id="c2_3" value="3" class="hidden radio-custom" onchange="calc5C()"><label for="c2_3" class="flex-1 p-2 border rounded cursor-pointer text-center">3 (Taksiran ≥ 120%)</label>
+                                <input type="radio" name="c2" id="c2_3" value="3" class="hidden radio-custom" onchange="calc5C()"><label for="c2_3" class="flex-1 p-2 border rounded cursor-pointer text-center">3 (Taksiran >= 120%)</label>
                                 <input type="radio" name="c2" id="c2_2" value="2" class="hidden radio-custom" onchange="calc5C()"><label for="c2_2" class="flex-1 p-2 border rounded cursor-pointer text-center">2 (Taksiran 100-119%)</label>
                                 <input type="radio" name="c2" id="c2_1" value="1" class="hidden radio-custom" onchange="calc5C()"><label for="c2_1" class="flex-1 p-2 border rounded cursor-pointer text-center">1 (< 100% / Tidak ada)</label>
                             </div>
@@ -272,7 +272,6 @@
     </div>
 
     <script>
-        // URL Google Apps Script Anda
         const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyCOgE5Gh56t8UpSB8tl1Z5kVgbiVjor6fXhxz2mdv7yRAt8R_jNh-GpPPOCBjBh15C/exec';
         
         let localDatabase = JSON.parse(localStorage.getItem('koperasi_db')) || [];
@@ -281,19 +280,18 @@
             return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(angka || 0);
         }
 
-        // --- SISTEM NAVIGASI & VIEW ---
         function showView(view) {
             document.getElementById('view-dashboard').classList.add('hidden');
             document.getElementById('view-form').classList.add('hidden');
             
             if(view === 'dashboard') {
                 document.getElementById('view-dashboard').classList.remove('hidden');
-                fetchFromServer();
+                loadData();
             } else if (view === 'form-input') {
                 document.getElementById('view-form').classList.remove('hidden');
                 document.getElementById('loanForm').reset();
-                document.getElementById('data_id').value = Date.now(); // Generate ID unik
-                lockSections(); // Kunci form untuk input baru
+                document.getElementById('data_id').value = Date.now();
+                lockSections();
                 resetDisplays();
             }
         }
@@ -307,7 +305,7 @@
                 return;
             }
 
-            localDatabase.forEach(item => {
+            localDatabase.forEach((item, index) => {
                 let statusColor = item.status_approval.includes("DISETUJUI") ? "bg-green-100 text-green-800" : 
                                   item.status_approval === "DITOLAK" ? "bg-red-100 text-red-800" : "bg-yellow-100 text-yellow-800";
                 
@@ -319,14 +317,13 @@
                     <td class="p-4 text-sm">${formatRp(item.nominal)}</td>
                     <td class="p-4 text-sm"><span class="px-2 py-1 rounded text-xs font-bold ${statusColor}">${item.status_approval}</span></td>
                     <td class="p-4 text-sm text-center">
-                        <button onclick="openForm(${item.id})" class="bg-emerald-100 text-emerald-700 px-3 py-1 rounded hover:bg-emerald-200 text-xs font-bold">Proses / Lihat</button>
+                        <button onclick="openForm(${index})" class="bg-emerald-100 text-emerald-700 px-3 py-1 rounded hover:bg-emerald-200 text-xs font-bold">Proses / Lihat</button>
                     </td>
                 `;
                 tbody.appendChild(tr);
             });
         }
 
-        // Fungsi Ambil Data dari Google Sheets (Jika Anda sudah setup fungsi doGet di GAS)
         function fetchFromServer() {
             const tbody = document.getElementById('table-body');
             tbody.innerHTML = '<tr><td colspan="5" class="text-center p-4 text-emerald-600 font-bold"><i class="fas fa-spinner fa-spin mr-2"></i> Mengambil data dari server...</td></tr>';
@@ -345,11 +342,13 @@
                 });
         }
 
-        function openForm(id) {
-            const data = localDatabase.find(d => d.id == id);
+        function openForm(index) {
+            document.getElementById('loanForm').reset();
+            
+            const data = localDatabase[index];
             if(!data) return;
 
-            document.getElementById('data_id').value = data.id;
+            document.getElementById('data_id').value = data.id || '';
             document.getElementById('nama').value = data.nama || '';
             document.getElementById('nik').value = data.nik || '';
             document.getElementById('departemen').value = data.departemen || '';
@@ -366,7 +365,6 @@
             document.getElementById('status_approval').value = data.status_approval || 'Menunggu';
             document.getElementById('catatan').value = data.catatan || '';
 
-            // Set Radio buttons (5C) if exist
             if(data.c1) document.getElementById(`c1_${data.c1}`).checked = true;
             if(data.c2) document.getElementById(`c2_${data.c2}`).checked = true;
             if(data.c3) document.getElementById(`c3_${data.c3}`).checked = true;
@@ -377,7 +375,7 @@
             calculateJaminan();
             calc5C();
             
-            lockSections(); // Kunci PIN lagi saat membuka berkas
+            lockSections();
             document.getElementById('view-dashboard').classList.add('hidden');
             document.getElementById('view-form').classList.remove('hidden');
         }
@@ -415,7 +413,6 @@
                 c5: document.querySelector('input[name="c5"]:checked')?.value || null
             };
 
-            // Simpan ke local storage agar tampil di dashboard langsung
             let existingIndex = localDatabase.findIndex(d => d.id == data.id);
             if(existingIndex >= 0) {
                 localDatabase[existingIndex] = data; 
@@ -424,12 +421,10 @@
             }
             localStorage.setItem('koperasi_db', JSON.stringify(localDatabase));
 
-            // Ubah tombol jadi loading
             let btn = document.getElementById('btn-simpan');
             btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i> MENGIRIM KE GOOGLE SHEETS...';
             btn.disabled = true;
 
-            // Kirim ke Google Sheets
             fetch(SCRIPT_URL, {
                 method: 'POST',
                 body: JSON.stringify(data),
@@ -452,7 +447,6 @@
             });
         }
 
-        // --- SISTEM PIN OTORISASI ---
         function lockSections() {
             document.getElementById('overlay-unit').classList.remove('hidden');
             document.getElementById('overlay-pengurus').classList.remove('hidden');
@@ -476,7 +470,6 @@
             }
         }
 
-        // --- FUNGSI KALKULASI (Sama seperti sebelumnya) ---
         function resetDisplays() {
             document.getElementById('sisa_gaji_display').innerText = "Rp 0";
             document.getElementById('syarat_jaminan_display').innerText = "Rp 0";
@@ -504,7 +497,7 @@
             
             let statusEl = document.getElementById('status_jaminan');
             if(taksiran >= syarat && syarat > 0) {
-                statusEl.innerHTML = "<span class='text-green-600 print:text-black'>✓ SESUAI KETENTUAN (≥120%)</span>";
+                statusEl.innerHTML = "<span class='text-green-600 print:text-black'>✓ SESUAI KETENTUAN (>=120%)</span>";
             } else if(taksiran > 0) {
                 statusEl.innerHTML = "<span class='text-red-600 print:text-black'>✗ TIDAK SESUAI (<120%)</span>";
             } else { statusEl.innerHTML = ""; }
@@ -538,8 +531,8 @@
             }
         }
 
-        // Initialize
         showView('dashboard');
+        fetchFromServer();
     </script>
 </body>
 </html>
