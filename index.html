@@ -150,15 +150,14 @@
 
                 <!-- 3. ANALISIS 5C (DENGAN KUNCI PIN) -->
                 <div class="section-card border-l-4 border-green-500 relative overflow-hidden" id="section-4">
-                    <!-- Overlay PIN -->
+                    <!-- Overlay PIN Kepala Unit -->
                     <div id="overlay-unit" class="absolute inset-0 bg-gray-100/95 backdrop-blur-sm z-10 flex flex-col justify-center items-center no-print">
                         <i class="fas fa-lock text-3xl text-gray-400 mb-2"></i>
                         <h3 class="font-bold text-lg mb-2">Area Kepala Unit</h3>
                         <div class="flex gap-2">
-                            <input type="password" id="pin-unit" placeholder="Masukkan PIN" class="p-2 border rounded text-center w-32">
-                            <button type="button" onclick="unlockSection('unit')" class="bg-green-600 text-white px-4 py-2 rounded font-bold">Buka</button>
+                            <input type="password" id="pin-unit" placeholder="Masukkan PIN" class="p-2 border rounded text-center w-36">
+                            <button type="button" onclick="unlockSection('unit')" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded font-bold">Buka</button>
                         </div>
-                        <p class="text-xs text-gray-500 mt-2">*Gunakan PIN: 1234 untuk demo</p>
                     </div>
 
                     <h2 class="text-xl font-bold mb-4 flex items-center"><i class="fas fa-chart-pie mr-2 text-green-500 no-print"></i> IV. Analisis 5C</h2>
@@ -215,15 +214,14 @@
 
                 <!-- 4. KEPUTUSAN PENGURUS (DENGAN KUNCI PIN) -->
                 <div class="section-card border-l-4 border-red-500 bg-red-50 relative print:bg-transparent" id="section-5">
-                    <!-- Overlay PIN -->
+                    <!-- Overlay PIN Pengurus -->
                     <div id="overlay-pengurus" class="absolute inset-0 bg-red-50/95 backdrop-blur-sm z-10 flex flex-col justify-center items-center no-print">
                         <i class="fas fa-lock text-3xl text-red-400 mb-2"></i>
                         <h3 class="font-bold text-lg mb-2 text-red-800">Area Pengurus Koperasi</h3>
                         <div class="flex gap-2">
-                            <input type="password" id="pin-pengurus" placeholder="Masukkan PIN" class="p-2 border rounded text-center w-32">
-                            <button type="button" onclick="unlockSection('pengurus')" class="bg-red-600 text-white px-4 py-2 rounded font-bold">Buka</button>
+                            <input type="password" id="pin-pengurus" placeholder="Masukkan PIN" class="p-2 border rounded text-center w-36">
+                            <button type="button" onclick="unlockSection('pengurus')" class="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded font-bold">Buka</button>
                         </div>
-                        <p class="text-xs text-red-500 mt-2">*Gunakan PIN: 5678 untuk demo</p>
                     </div>
 
                     <h2 class="text-xl font-bold mb-4 flex items-center text-red-700 print:text-black"><i class="fas fa-signature mr-2 no-print"></i> V. Keputusan Pengurus (Approval)</h2>
@@ -274,6 +272,12 @@
     <script>
         const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwgWxdLpyJr9rloafsfNlH0_S44RN1gQBcECtIL7f5nYnD764urUfufWE3stw65FfOF/exec';
         
+        // =========================================================================
+        // PENGATURAN PIN KEAMANAN INTERNAL (Silakan sesuaikan PIN Anda di sini)
+        // =========================================================================
+        const PIN_KEPALA_UNIT = '4155';   // Ganti dengan PIN rahasia Kepala Unit
+        const PIN_PENGURUS    = '9876';   // Ganti dengan PIN rahasia Pengurus
+
         let localDatabase = JSON.parse(localStorage.getItem('koperasi_db')) || [];
 
         const formatRp = (angka) => {
@@ -421,6 +425,15 @@
                 alert("Nama Pemohon Wajib Diisi!"); return;
             }
 
+            let statusApproval = document.getElementById('status_approval').value;
+            let pinPengurusInput = document.getElementById('pin-pengurus').value;
+
+            // PROTEKSI OTORISASI: Jika disetujui, pastikan PIN pengurus valid
+            if (statusApproval.includes("DISETUJUI") && pinPengurusInput !== PIN_PENGURUS) {
+                alert("Peringatan: Keputusan Persetujuan Pinjaman hanya dapat disimpan jika PIN Pengurus telah dimasukkan dengan benar!");
+                return;
+            }
+
             let data = {
                 id: id ? Number(id) : Date.now(),
                 nama: document.getElementById('nama').value,
@@ -439,7 +452,7 @@
                 taksiran_jaminan: Number(document.getElementById('taksiran_jaminan').value),
                 skor_5c: document.getElementById('teks_skor').innerText,
                 rekomendasi: document.getElementById('teks_rekomendasi').innerText,
-                status_approval: document.getElementById('status_approval').value,
+                status_approval: statusApproval,
                 catatan: document.getElementById('catatan').value,
                 c1: document.querySelector('input[name="c1"]:checked')?.value || null,
                 c2: document.querySelector('input[name="c2"]:checked')?.value || null,
@@ -491,13 +504,13 @@
 
         function unlockSection(type) {
             if(type === 'unit') {
-                if(document.getElementById('pin-unit').value === '1234') {
+                if(document.getElementById('pin-unit').value === PIN_KEPALA_UNIT) {
                     document.getElementById('overlay-unit').classList.add('hidden');
                 } else {
                     alert("PIN Kepala Unit Salah!");
                 }
             } else if (type === 'pengurus') {
-                if(document.getElementById('pin-pengurus').value === '5678') {
+                if(document.getElementById('pin-pengurus').value === PIN_PENGURUS) {
                     document.getElementById('overlay-pengurus').classList.add('hidden');
                 } else {
                     alert("PIN Pengurus Salah!");
